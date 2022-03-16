@@ -1,0 +1,629 @@
+---
+title: "Project 2. EFA"
+author: "Lomatskiy Andrey and Pomogaev Dmitriy"
+date: '20th May 2020 '
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Aim and Research Question
+The aim of my research is to investigate what kind of issues exist in explaining math achievement of students of Grade 8 in USA. The data was taken from TIMMS 2015 studies, filtered by country. I have taken 9013 observations of 24 variables which are primarily dedicated to student's attitude toward math science, teachers involvement and math abilities. These categories are constructed with a help of factor analysis. Next, I conducted regression analysis which explains math achievement of a student, it includes factor scores which were constructed on the basis of 24 variables, and also include 3 predictor variables which show gender, parents' education, and whether a person was born in USA or not. 
+**Research Question:** 
+    + Which latent factors influence the math achievement score of students in USA?
+**Hypotheses:** 
+    + Higher abilities in math science increase math achievement score of a student.
+    + Students, whose parents' have high level of education, have higher math achievement score than those, whose parents' have lower level of education.
+
+# Data Preparation
+```{r results="hide", warning=FALSE}
+library(foreign)
+data <- read.spss("BSGUSAM6.sav", to.data.frame = TRUE, use.value.labels = TRUE)
+```
+
+Uploading the dataset and constructing a dataframe.
+
+```{r results="hide", warning=FALSE}
+library(dplyr)
+```
+
+```{r}
+data.short <- data[c("BSBM17A", "BSBM17B", "BSBM17C", "BSBM17D", "BSBM17E", "BSBM17F", "BSBM17G", "BSBM17H", "BSBM17I", "BSBM18A", "BSBM18B", "BSBM18C", "BSBM18D", "BSBM18E", "BSBM18F", "BSBM18G", "BSBM18H", "BSBM18I", "BSBM18J", "BSBM19A", "BSBM19B", "BSBM19C", "BSBM19D", "BSBM19E", "BSMMAT01", "ITSEX", "BSDGEDUP", "BSBG10A")]
+
+data.short1 <- na.omit(data.short)
+```
+
+First, I selected variables which are necessary for further analysis. Second, I deleted all of the "na" observations in order to conduct Factor Analysis further.
+
+```{r}
+data.efa <- data.short1[c("BSBM17A", "BSBM17B", "BSBM17C", "BSBM17D", "BSBM17E", "BSBM17F", "BSBM17G", "BSBM17H", "BSBM17I", "BSBM18A", "BSBM18B", "BSBM18C", "BSBM18D", "BSBM18E", "BSBM18F", "BSBM18G", "BSBM18H", "BSBM18I", "BSBM18J", "BSBM19A", "BSBM19B", "BSBM19C", "BSBM19D", "BSBM19E")]
+
+data.reg <- data.short1[c("BSMMAT01", "ITSEX", "BSBG10A", "BSDGEDUP")]
+```
+
+I divided dataset into two subsets, **data.efa** is used for factor analysis, **data.reg** is used for regression model (later I will include factor scores in this subset).
+
+# Descriptive Statistics
+##BSBM17A - Enjoy Learning Mathematics
+```{r}
+library(ggplot2)
+summary(data.short1$BSBM17A)
+
+ggplot(data = data.short1, aes (x = BSBM17A)) + 
+  geom_bar(aes(y=..count../sum(..count..))) +
+  labs(x = "Enjoy Learning Mathematics") +
+  scale_y_continuous(labels=scales::percent) +
+  ylab("Relative Frequencies") +
+  geom_text(aes( label = scales::percent(..prop..),
+  y= ..prop.. ), stat= "count", vjust = -.5, size = 2) +
+  theme(axis.title = element_text(size = 7), axis.text = element_text(size = 7)) +
+  theme_light()
+```
+
+##BSBM17B - Wish Have Not Study Math
+```{r}
+summary(data.short1$BSBM17B)
+
+ggplot(data = data.short1, aes (x = BSBM17B)) + 
+  geom_bar(aes(y=..count../sum(..count..))) +
+  labs(x = "Wish Have Not Study Math") +
+  scale_y_continuous(labels=scales::percent) +
+  ylab("Relative Frequencies") +
+  geom_text(aes( label = scales::percent(..prop..),
+  y= ..prop.. ), stat= "count", vjust = -.5, size = 2) +
+  theme(axis.title = element_text(size = 7), axis.text = element_text(size = 7)) +
+  theme_light()
+```
+
+##BSBM17C - Math Is Boring
+```{r}
+summary(data.short1$BSBM17C)
+
+ggplot(data = data.short1, aes (x = BSBM17C)) + 
+  geom_bar(aes(y=..count../sum(..count..))) +
+  labs(x = "Math Is Boring") +
+  scale_y_continuous(labels=scales::percent) +
+  ylab("Relative Frequencies") +
+  geom_text(aes( label = scales::percent(..prop..),
+  y= ..prop.. ), stat= "count", vjust = -.5, size = 2) +
+  theme(axis.title = element_text(size = 7), axis.text = element_text(size = 7)) +
+  theme_light()
+```
+
+##BSBM17D - Learn Interesting Things
+```{r}
+summary(data.short1$BSBM17D)
+
+ggplot(data = data.short1, aes (x = BSBM17D)) + 
+  geom_bar(aes(y=..count../sum(..count..))) +
+  labs(x = "Math Is Boring") +
+  scale_y_continuous(labels=scales::percent) +
+  ylab("Relative Frequencies") +
+  geom_text(aes( label = scales::percent(..prop..),
+  y= ..prop.. ), stat= "count", vjust = -.5, size = 2) +
+  theme(axis.title = element_text(size = 7), axis.text = element_text(size = 7)) +
+  theme_light()
+```
+
+##BSBM17E - Like Mathematics
+```{r}
+summary(data.short1$BSBM17E)
+
+ggplot(data = data.short1, aes (x = BSBM17E)) + 
+  geom_bar(aes(y=..count../sum(..count..))) +
+  labs(x = "Like Mathematics") +
+  scale_y_continuous(labels=scales::percent) +
+  ylab("Relative Frequencies") +
+  geom_text(aes( label = scales::percent(..prop..),
+  y= ..prop.. ), stat= "count", vjust = -.5, size = 2) +
+  theme(axis.title = element_text(size = 7), axis.text = element_text(size = 7)) +
+  theme_light()
+```
+
+##BSBM17F - Like Numbers
+```{r}
+summary(data.short1$BSBM17F)
+
+ggplot(data = data.short1, aes (x = BSBM17F)) + 
+  geom_bar(aes(y=..count../sum(..count..))) +
+  labs(x = "Like Numbers") +
+  scale_y_continuous(labels=scales::percent) +
+  ylab("Relative Frequencies") +
+  geom_text(aes( label = scales::percent(..prop..),
+  y= ..prop.. ), stat= "count", vjust = -.5, size = 2) +
+  theme(axis.title = element_text(size = 7), axis.text = element_text(size = 7)) +
+  theme_light()
+```
+
+##BSBM17G - Like Math Problems
+```{r}
+summary(data.short1$BSBM17G)
+
+ggplot(data = data.short1, aes (x = BSBM17G)) + 
+  geom_bar(aes(y=..count../sum(..count..))) +
+  labs(x = "Like Math Problems") +
+  scale_y_continuous(labels=scales::percent) +
+  ylab("Relative Frequencies") +
+  geom_text(aes( label = scales::percent(..prop..),
+  y= ..prop.. ), stat= "count", vjust = -.5, size = 2) +
+  theme(axis.title = element_text(size = 7), axis.text = element_text(size = 7)) +
+  theme_light()
+```
+
+##BSBM17H - Look Forward to Math Class
+```{r}
+summary(data.short1$BSBM17H)
+
+ggplot(data = data.short1, aes (x = BSBM17H)) + 
+  geom_bar(aes(y=..count../sum(..count..))) +
+  labs(x = "Like Math Problems") +
+  scale_y_continuous(labels=scales::percent) +
+  ylab("Relative Frequencies") +
+  geom_text(aes( label = scales::percent(..prop..),
+  y= ..prop.. ), stat= "count", vjust = -.5, size = 2) +
+  theme(axis.title = element_text(size = 7), axis.text = element_text(size = 7)) +
+  theme_light()
+```
+
+##BSBM17I - Favorite Subject
+```{r}
+summary(data.short1$BSBM17I)
+
+ggplot(data = data.short1, aes (x = BSBM17I)) + 
+  geom_bar(aes(y=..count../sum(..count..))) +
+  labs(x = "Maths is Favorite Subject") +
+  scale_y_continuous(labels=scales::percent) +
+  ylab("Relative Frequencies") +
+  geom_text(aes( label = scales::percent(..prop..),
+  y= ..prop.. ), stat= "count", vjust = -.5, size = 2) +
+  theme(axis.title = element_text(size = 7), axis.text = element_text(size = 7)) +
+  theme_light()
+```
+
+##BSBM18A - Teacher Expects To Do
+```{r}
+summary(data.short1$BSBM18A)
+
+ggplot(data = data.short1, aes (x = BSBM18A)) + 
+  geom_bar(aes(y=..count../sum(..count..))) +
+  labs(x = "Teacher Expects To Do") +
+  scale_y_continuous(labels=scales::percent) +
+  ylab("Relative Frequencies") +
+  geom_text(aes( label = scales::percent(..prop..),
+  y= ..prop.. ), stat= "count", vjust = -.5, size = 2) +
+  theme(axis.title = element_text(size = 7), axis.text = element_text(size = 7)) +
+  theme_light()
+```
+
+##BSBM18B - Teacher Is Easy To Understand
+```{r}
+summary(data.short1$BSBM18B)
+
+ggplot(data = data.short1, aes (x = BSBM18B)) + 
+  geom_bar(aes(y=..count../sum(..count..))) +
+  labs(x = "Teacher Is Easy To Understand") +
+  scale_y_continuous(labels=scales::percent) +
+  ylab("Relative Frequencies") +
+  geom_text(aes( label = scales::percent(..prop..),
+  y= ..prop.. ), stat= "count", vjust = -.5, size = 2) +
+  theme(axis.title = element_text(size = 7), axis.text = element_text(size = 7)) +
+  theme_light()
+```
+
+##BSBM18C - Interesred in What Teacher Says
+```{r}
+summary(data.short1$BSBM18C)
+
+ggplot(data = data.short1, aes (x = BSBM18C)) + 
+  geom_bar(aes(y=..count../sum(..count..))) +
+  labs(x = "Interesred in What Teacher Says") +
+  scale_y_continuous(labels=scales::percent) +
+  ylab("Relative Frequencies") +
+  geom_text(aes( label = scales::percent(..prop..),
+  y= ..prop.. ), stat= "count", vjust = -.5, size = 2) +
+  theme(axis.title = element_text(size = 7), axis.text = element_text(size = 7)) +
+  theme_light()
+```
+
+##BSBM18D - Interesting Things To Do
+```{r}
+summary(data.short1$BSBM18D)
+
+ggplot(data = data.short1, aes (x = BSBM18D)) + 
+  geom_bar(aes(y=..count../sum(..count..))) +
+  labs(x = "Interesting Things To Do") +
+  scale_y_continuous(labels=scales::percent) +
+  ylab("Relative Frequencies") +
+  geom_text(aes( label = scales::percent(..prop..),
+  y= ..prop.. ), stat= "count", vjust = -.5, size = 2) +
+  theme(axis.title = element_text(size = 7), axis.text = element_text(size = 7)) +
+  theme_light()
+```
+
+##BSBM18E - Teacher Clear Answers
+```{r}
+summary(data.short1$BSBM18E)
+
+ggplot(data = data.short1, aes (x = BSBM18E)) + 
+  geom_bar(aes(y=..count../sum(..count..))) +
+  labs(x = "Teacher Clear Answers") +
+  scale_y_continuous(labels=scales::percent) +
+  ylab("Relative Frequencies") +
+  geom_text(aes( label = scales::percent(..prop..),
+  y= ..prop.. ), stat= "count", vjust = -.5, size = 2) +
+  theme(axis.title = element_text(size = 7), axis.text = element_text(size = 7)) +
+  theme_light()
+```
+
+##BSBM18F - Teacher Explains Good
+```{r}
+summary(data.short1$BSBM18F)
+
+ggplot(data = data.short1, aes (x = BSBM18F)) + 
+  geom_bar(aes(y=..count../sum(..count..))) +
+  labs(x = "Teacher Explains Good") +
+  scale_y_continuous(labels=scales::percent) +
+  ylab("Relative Frequencies") +
+  geom_text(aes( label = scales::percent(..prop..),
+  y= ..prop.. ), stat= "count", vjust = -.5, size = 2) +
+  theme(axis.title = element_text(size = 7), axis.text = element_text(size = 7)) +
+  theme_light()
+```
+
+##BSBM18G - Teacher Shows Learned
+```{r}
+summary(data.short1$BSBM18G)
+
+ggplot(data = data.short1, aes (x = BSBM18G)) + 
+  geom_bar(aes(y=..count../sum(..count..))) +
+  labs(x = "Teacher Shows Learned") +
+  scale_y_continuous(labels=scales::percent) +
+  ylab("Relative Frequencies") +
+  geom_text(aes( label = scales::percent(..prop..),
+  y= ..prop.. ), stat= "count", vjust = -.5, size = 2) +
+  theme(axis.title = element_text(size = 7), axis.text = element_text(size = 7)) +
+  theme_light()
+```
+
+##BSBM18H - Different Things To Help
+```{r}
+summary(data.short1$BSBM18H)
+
+ggplot(data = data.short1, aes (x = BSBM18H)) + 
+  geom_bar(aes(y=..count../sum(..count..))) +
+  labs(x = "Different Things To Help") +
+  scale_y_continuous(labels=scales::percent) +
+  ylab("Relative Frequencies") +
+  geom_text(aes( label = scales::percent(..prop..),
+  y= ..prop.. ), stat= "count", vjust = -.5, size = 2) +
+  theme(axis.title = element_text(size = 7), axis.text = element_text(size = 7)) +
+  theme_light()
+```
+
+##BSBM18I - Tells How To Do Better
+```{r}
+summary(data.short1$BSBM18I)
+
+ggplot(data = data.short1, aes (x = BSBM18I)) + 
+  geom_bar(aes(y=..count../sum(..count..))) +
+  labs(x = "Different Things To Help") +
+  scale_y_continuous(labels=scales::percent) +
+  ylab("Relative Frequencies") +
+  geom_text(aes( label = scales::percent(..prop..),
+  y= ..prop.. ), stat= "count", vjust = -.5, size = 2) +
+  theme(axis.title = element_text(size = 7), axis.text = element_text(size = 7)) +
+  theme_light()
+```
+
+##BSBM18J - Teacher Listens
+```{r}
+summary(data.short1$BSBM18J)
+
+ggplot(data = data.short1, aes (x = BSBM18J)) + 
+  geom_bar(aes(y=..count../sum(..count..))) +
+  labs(x = "Teacher Listens") +
+  scale_y_continuous(labels=scales::percent) +
+  ylab("Relative Frequencies") +
+  geom_text(aes( label = scales::percent(..prop..),
+  y= ..prop.. ), stat= "count", vjust = -.5, size = 2) +
+  theme(axis.title = element_text(size = 7), axis.text = element_text(size = 7)) +
+  theme_light()
+```
+
+##BSBM19A - Usually Do Well In Math 
+```{r}
+summary(data.short1$BSBM19A)
+
+ggplot(data = data.short1, aes (x = BSBM19A)) + 
+  geom_bar(aes(y=..count../sum(..count..))) +
+  labs(x = "Usually Do Well In Math") +
+  scale_y_continuous(labels=scales::percent) +
+  ylab("Relative Frequencies") +
+  geom_text(aes( label = scales::percent(..prop..),
+  y= ..prop.. ), stat= "count", vjust = -.5, size = 2) +
+  theme(axis.title = element_text(size = 7), axis.text = element_text(size = 7)) +
+  theme_light()
+```
+
+##BSBM19B - Mathematics Is More Difficult
+```{r}
+summary(data.short1$BSBM19B)
+
+ggplot(data = data.short1, aes (x = BSBM19B)) + 
+  geom_bar(aes(y=..count../sum(..count..))) +
+  labs(x = "Mathematics Is More Difficult") +
+  scale_y_continuous(labels=scales::percent) +
+  ylab("Relative Frequencies") +
+  geom_text(aes( label = scales::percent(..prop..),
+  y= ..prop.. ), stat= "count", vjust = -.5, size = 2) +
+  theme(axis.title = element_text(size = 7), axis.text = element_text(size = 7)) +
+  theme_light()
+```
+
+##BSBM19C - Mathematics Not My Strength
+```{r}
+summary(data.short1$BSBM19C)
+
+ggplot(data = data.short1, aes (x = BSBM19C)) + 
+  geom_bar(aes(y=..count../sum(..count..))) +
+  labs(x = "Mathematics Not My Strength") +
+  scale_y_continuous(labels=scales::percent) +
+  ylab("Relative Frequencies") +
+  geom_text(aes( label = scales::percent(..prop..),
+  y= ..prop.. ), stat= "count", vjust = -.5, size = 2) +
+  theme(axis.title = element_text(size = 7), axis.text = element_text(size = 7)) +
+  theme_light()
+```
+
+##BSBM19D - Learn Quickly In Mathematics
+```{r}
+summary(data.short1$BSBM19D)
+
+ggplot(data = data.short1, aes (x = BSBM19D)) + 
+  geom_bar(aes(y=..count../sum(..count..))) +
+  labs(x = "Learn Quickly In Mathematics") +
+  scale_y_continuous(labels=scales::percent) +
+  ylab("Relative Frequencies") +
+  geom_text(aes( label = scales::percent(..prop..),
+  y= ..prop.. ), stat= "count", vjust = -.5, size = 2) +
+  theme(axis.title = element_text(size = 7), axis.text = element_text(size = 7)) +
+  theme_light()
+```
+
+##BSBM19E - Math Makes Nervous
+```{r}
+summary(data.short1$BSBM19E)
+
+ggplot(data = data.short1, aes (x = BSBM19E)) + 
+  geom_bar(aes(y=..count../sum(..count..))) +
+  labs(x = "Math Makes Nervous") +
+  scale_y_continuous(labels=scales::percent) +
+  ylab("Relative Frequencies") +
+  geom_text(aes( label = scales::percent(..prop..),
+  y= ..prop.. ), stat= "count", vjust = -.5, size = 2) +
+  theme(axis.title = element_text(size = 7), axis.text = element_text(size = 7)) +
+  theme_light()
+```
+
+##BSMMAT01 - 1st Plausible Value Mathematics
+```{r}
+data.short1$BSMMAT01 <- as.numeric(as.character(data.short1$BSMMAT01))
+
+ggplot(data = data.short1, aes (x = as.numeric(as.character(BSMMAT01)), y = (..count..)/sum(..count..))) + 
+  geom_histogram(bins = 10, binwidth = 0.25) +
+  labs(x = "1st Plausible Value Mathematics") +
+  scale_y_continuous(labels=scales::percent) +
+  ylab("Relative Frequencies") +
+  geom_text(aes( label = scales::percent(..prop..),
+  y= ..prop.. ), stat= "count", vjust = -.5, size = 2) +
+  theme(axis.title = element_text(size = 7), axis.text = element_text(size = 7)) +
+  theme_light()
+```
+
+##ITSEX - Sex of Students
+```{r}
+summary(data.short1$ITSEX)
+
+ggplot(data = data.short1, aes (x = ITSEX)) + 
+  geom_bar(aes(y=..count../sum(..count..))) +
+  labs(x = "Sex of Students") +
+  scale_y_continuous(labels=scales::percent) +
+  ylab("Relative Frequencies") +
+  geom_text(aes( label = scales::percent(..prop..),
+  y= ..prop.. ), stat= "count", vjust = -.5, size = 2) +
+  theme(axis.title = element_text(size = 7), axis.text = element_text(size = 7)) +
+  theme_light()
+```
+
+##BSDGEDUP - Parents' Highest Education Level
+```{r}
+summary(data.short1$BSDGEDUP)
+
+ggplot(data = data.short1, aes (x = BSDGEDUP)) + 
+  geom_bar(aes(y=..count../sum(..count..))) +
+  labs(x = "Parents' Highest Education Level") +
+  scale_y_continuous(labels=scales::percent) +
+  ylab("Relative Frequencies") +
+  geom_text(aes( label = scales::percent(..prop..),
+  y= ..prop.. ), stat= "count", vjust = -.5, size = 2) +
+  theme(axis.title = element_text(size = 7), axis.text = element_text(size = 7)) +
+  theme_light() + coord_flip()
+```
+
+##BSBG10A - Born in USA
+```{r}
+summary(data.short1$BSBG10A)
+
+ggplot(data = data.short1, aes (x = BSBG10A)) + 
+  geom_bar(aes(y=..count../sum(..count..))) +
+  labs(x = "Born in USA") +
+  scale_y_continuous(labels=scales::percent) +
+  ylab("Relative Frequencies") +
+  geom_text(aes( label = scales::percent(..prop..),
+  y= ..prop.. ), stat= "count", vjust = -.5, size = 2) +
+  theme(axis.title = element_text(size = 7), axis.text = element_text(size = 7)) +
+  theme_light()
+```
+
+# EFA
+## Correlation
+```{r results="hide", warning=FALSE}
+library(polycor)
+library(corrplot)
+dat.cor <- hetcor(data.efa)
+```
+
+Uploading packages which are needed. Finding correlation between variables.
+
+## Plot
+```{r}
+corrplot(dat.cor$correlations)
+```
+
+The plot above shows correlations between variables presented in the data. It is clear that there are areas where the correlations between variables of the same "number group", for example 17 or 18, are high enough to consider them to be associated with one particular trajectory. Thus, I can make a conclusion, that these variables are appropriate to be chosen for further Explonatory Factor Analysis.
+
+## Number of Factors
+```{r results="hide", warning=FALSE}
+library(psych)
+```
+
+I uploaded the package which is necessary for further analysis.
+
+```{r}
+data.efa1 <- as.data.frame(lapply(data.efa, as.numeric))
+fa.parallel(data.efa1, fa="both", n.iter=100 )
+```
+
+In order to make a scree plot and find the appropriate number of factors I converted all of the variable in my dataset into numeric.
+
+The maximum number of factors is 4, and the number of components is 3, each additional factor or component does not explain more variance.
+
+## Model
+### Creating a model
+```{r results='hide'}
+m1 <- fa(data.efa1, nfactors = 3, rotate = "varimax", fm = "ml", cor = "mixed")
+```
+
+- *nfactors* = 3 (After some trials, I have found that this is the optimal number of factors to make the good model fit)
+- *rotate* = "varimax" (Rotation is needed in this model, because without it SS loadings on one factor are very high in comparison to other factors. I have chosen this type of rotation under the assumption that variables are correlated.)
+- *fm* = "ml" (I have chosen Maximum Likelihood factor extraction technique, assuming multivariate normal distribution)
+- *cor* = "mixed" (This is done in order to make further analysis with factor scores)
+
+### Loadings
+```{r}
+print(m1$loadings,cutoff = 0.5)
+```
+
+Factor loadings shows that all of the variables has only 1 factor which explains them. I chose to setup cutoff = 0.5 as long it shows only variables which are significant in my model. We can see that there are no "double-loading" variables, thus, I may conclude that this is a simple structure.
+
+### Adequacy Test
+```{r}
+m1
+```
+
+- *RMSR* (root mean square of residuals) is 0.02. As long as the value should be closer to 0, I may conclude that this value is acceptable.
+- *RMSEA* (root mean square error of approximation) index. The value is 0.084 which shows almost good model fit as long as it is very close to 0.08.
+- *Tucker-Lewis Index* is 0.921 is more than 0.9 which means that this value is acceptable.
+
+```{r}
+fa.diagram(m1)
+```
+
+The above plot shows how variables are distibuted to factors.
+
+## Chronbach's alpha
+```{r warning=FALSE}
+ML1 <- as.data.frame(data.efa1[c("BSBM17A", "BSBM17B", "BSBM17C", "BSBM17D", "BSBM17E", "BSBM17F", "BSBM17G", "BSBM17H", "BSBM17I")])
+alpha(ML1, check.keys = TRUE)
+```
+
+For factor ML1 Cronbach's alpha (0.94) is bigger than 0.7, which indicates very good reliability.
+
+```{r}
+ML2 <- as.data.frame(data.efa1[c("BSBM18A", "BSBM18B", "BSBM18C", "BSBM18D", "BSBM18E", "BSBM18F", "BSBM18G", "BSBM18H", "BSBM18I", "BSBM18J")])
+alpha(ML2, check.keys = TRUE)
+```
+
+For factor ML2 Cronbach's alpha (0.94) is bigger than 0.7, which indicates very good reliability.
+
+```{r warning=FALSE}
+ML3 <- as.data.frame(data.efa1[c("BSBM19A", "BSBM19B", "BSBM19C", "BSBM19D", "BSBM19E")])
+alpha(ML3, check.keys = TRUE)
+```
+
+For factor ML3 Cronbach's alpha (0.84) is bigger than 0.7, which indicates good reliability.
+
+## Naming Factors
+
+- *ML1* "Student's overall attitude towards math science"
+- *ML2* "Teacher's involvement into studying process"
+- *ML3* "Student's abilities in math"
+
+## Factor Scores
+```{r}
+load <- m1$loadings[,1:2] 
+plot(load)
+fascores <- as.data.frame(m1$scores)
+data.fa <- cbind(data.efa1,fascores)
+names(data.fa)
+```
+
+# Regression Analysis
+```{r}
+data.full <- cbind(data.reg,fascores)
+names(data.full)
+```
+
+```{r}
+data.full$BSMMAT01 <- as.numeric(as.character(data.full$BSMMAT01))
+```
+
+```{r}
+model.reg <- lm(BSMMAT01 ~ ML2 + ML1 + ML3 + ITSEX + BSBG10A + BSDGEDUP , data = data.full)
+summary(model.reg)
+```
+
+
+The multiple regression model explains the relationship between *6 predictors* and *1 outcome* variable. It is important to notice that scales of ML1, ML2, and ML3 are reversed, which means that the increase in math achievement appears when the value of this predictors is low.
+
+1. Predictors
+    + *ML2* ("Teacher's involvement into studying process"): With the increase by 1 in ML2 factor score, the value of the intercept decreases by 2.7. It means that, deeper involvement of teacher into studiyng increases the math achievement of a student.
+    + *ML1* ("Student's overall attitude towards math science"): With the increase by 1 in ML1 factor score, the value of the intercept decreases by 10.6.It means that, positive attitude towards math science increases the math achievement of a student.
+    + *ML3* ("Student's abilities in math"): With the increase by 1 in ML3 factor score, the value of the intercept decreases by 34.9. It means that, higher abilities in math science increase the math achievement of a student.
+    + *ITSEX* ("Student's gender"): The estimate of the predictor is not significant, it means that math achievement does not strictly depends on gender of a student.
+    + *BSBG10A* ("Born in USA"): Even that this predictor is not highly significant, it is important to notice that if a student was born in USA, he or she has slightly higher math achievements.
+    + *BSDGEDUP* ("Education of parents"): The overall tendency shows that higher level of education of parents has positive influence on math achievement of a student.
+
+2. Outcome
+    + *BSMMAT01* ("Math Achievement"): The value of math achievement (intercept) is equal to 541.5 when predictors are equal to 0.
+
+3. Model
+    + The p-value is less than 0.05, which indicates that overall model is significant. The model explains *26.8 percent* of total variance.
+
+## Multicollinearity Checking
+```{r results="hide", warning=FALSE}
+library(car)
+```
+
+```{r}
+vif(model.reg)
+```
+
+According to the results above, the model has no problems with estimating the coefficient. The value of each predictor does not show that this predictor is related to other predictors.
+
+## Outliers and Leverages
+```{r}
+plot(model.reg)
+```
+
+According to plots above, I can make these conclusions:
+- The distribution of residuals is normal, they fit the staraight line almost perfectly
+- There are no leverages, because they do not cross Cook's distance line
+
+# Conclusion
+
+The research helped to find factors which are dedicated to investigating the attitude towards math science, and showed how these factors influence the math achievement of students in USA.
+First, I confirmed the hypothesis, that self-perception of higher abilities in math increase the score of math achievement of a student. Second, I found that lower education level of parents decreases the math achievement score of a student. Third, there is no significant difference in math achievements between males and females. 
+These are the most important conclusions which this research have shown.

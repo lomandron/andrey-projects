@@ -1,0 +1,442 @@
+---
+title: "Happiness project"
+author: "Pomogaev Dmitrii and Lomatskiy Andrey"
+date: "4/18/2020"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+This research paper is dedicated to the investigation of key factors which are related to the level of happiness of Russian citizens. The list of key factors was extracted from World Value Survey of 2006 filtered by country Russian Federation. The dataset includes 8534 observations at all, after finding the key factors the list decreased to 5229 observations of 6 variables. 
+
+The research is motivated by following reasons:
+1. Investigation of how different the relationship between the level of happiness and health state/financial resources of a person.
+2. Investigation of how does the importance of god in life is related to the level of happiness.
+
+Hypotheses:
+1. Satisfaction with financial resources of a person increases the level of happiness of the same person.
+2. Worse health state of a person decreases the level of happiness of the same person.
+3. Higher importance of god in life of a person increase the level of happiness of the same person.
+
+In the following part of the paper I will show the analysis of the relationship between key factors and outcome variable - the level of happiness.
+
+# Importing data
+
+## Reading the data and choosing the country
+
+```{r warning=FALSE, echo=FALSE, results='hide', include=FALSE}
+library(foreign)
+wvs <- read.spss("WVS.sav", to.data.frame = TRUE, use.value.labels = TRUE) 
+names(wvs)
+```
+
+```{r warning=FALSE, echo=FALSE, results='hide'}
+wvsRU <- subset(wvs, V2 == "Russia")
+```
+
+# Data Preparation 
+
+## Choosing the variables
+
+```{r}
+data <- data.frame(wvsRU$V10, wvsRU$V22, wvsRU$S009,
+                  wvsRU$V192,wvsRU$V11, wvsRU$V68,
+                  wvsRU$V237, wvsRU$V235)
+
+names(data) <- c("happy", "satisf", "country", 
+                "god", "health", "money",
+                "age", "gender")
+
+data <- na.omit(data)
+```
+
+I have chosen these variables as explanatory, because I consider that these are the key aspects of life of a person which define how the person estimates his/her level of happiness. Financial resources are essential part of life which give an access to personal basic needs and goods such as: food, household, transport etc. The health state of a person explains how the person feels, does he/she has any diseases, and overall body state. Such variables as age are important in defining how the relationship between explanatory and outcome variable differs among different age groups.
+
+## Recoding the varibles
+
+```{r}
+# life satisfaction
+class(data$satisf)
+table(data$satisf)
+data$satisf1 <-   ifelse(data$satisf=="Satisfied",10,
+                             ifelse(data$satisf=="Dissatisfied",1,
+                                    data$satisf))
+table(data$satisf, data$satisf1)
+data$satisf <- as.numeric(data$satisf)
+
+## happiness
+class(data$happy)
+data$happy1 <-   ifelse(data$happy=="Not at all happy",1,
+                            ifelse(data$happy=="Not very happy",2,
+                                   ifelse(data$happy=="Quite happy",3,
+                                          ifelse(data$happy=="Very happy",4, NA))))
+table(data$happy, data$happy1)
+
+## importance of god in the life
+class(data$god)
+data$god1 <- ifelse(data$god == "Not at all important", 1,
+                    ifelse(data$god == "Very important", 10,
+                          data$god))
+table(data$god, data$god1)
+
+## health
+class(data$health)
+data$health1 <-   ifelse(data$health=="Very poor",1,
+                            ifelse(data$health=="Poor",2,
+                                   ifelse(data$health=="Fair",3,
+                                          ifelse(data$health=="Good",4, 
+                                                 ifelse(data$health=="Very good", 5, NA)))))
+table(data$health, data$health1)
+
+## money
+class(data$money)
+data$money1 <-   ifelse(data$money=="Satisfied",10,
+                             ifelse(data$money=="Dissatisfied",1,
+                                    data$money))
+table(data$money, data$money1)
+```
+
+For the analysis I need to recode almost all of the variables into the same scales to compare them accurately.
+
+## Checking the class of variables and changing it to numeric (where applicable)
+
+```{r}
+## Self-perception of happiness
+class(data$happy1) 
+data$happy1 <- as.numeric(as.character(data$happy1))
+
+## Self-perception of satisfaction with life 
+class(data$satisf1)
+data$satisf1 <- as.numeric(as.character(data$satisf1))
+
+## Self-perception of the health state
+class(data$health1) 
+data$health1 <- as.factor(data$health1)
+
+## Importance of god in life
+class(data$god1)
+data$god1 <- as.numeric(as.character(data$god1))
+
+## Self-perception of satisfaction with financial situation of person's household
+class(data$money1)
+data$money1 <- as.numeric(as.character(data$money1))
+
+    # Socio-demographic characteristics
+
+## Age
+class(data$age)
+data$age <- as.numeric(as.character(data$age))
+
+##gender
+class(data$gender) 
+```
+
+I also changed the class of the variables to numeric where it was needed for further analysis.
+
+## Creating happiness index
+
+```{r}
+data$happyIND<- rowMeans(data[c('happy1','satisf1')], na.rm=T)                            
+summary(data$happyIND)
+class(data$happyIND)
+```
+
+It is important to create an index which will show the level of happiness of a person, it includes self-perception of happiness and satisfaction with life of a person. The index is called "happyIND", this is my outcome variable.
+
+## Subsetting 
+
+```{r}
+data.short <- data.frame(data$happyIND, data$god1, data$money1, data$health1, data$age, data$gender)
+```
+
+For further analysis, I created a dataset which consists only of needed variables for convenience.
+
+# Descriptive statistics and distribution of variables
+
+In this part, I investigated the distribution of all the variables included in my analysis, the relationship between explanatory and outcome variables with a help of bivariate tests such as correlation for the numeric explanatory variables ("money" and "god") and ANOVA for the categorical variable ("health").
+
+### outcome `happiness index`
+```{r}
+library(ggplot2)
+g1 <- ggplot(data = data.short, aes (x = data.happyIND, y = (..count..)/sum(..count..))) + 
+  geom_histogram(bins = 10, binwidth = 0.25) +
+  labs(x = "Happiness index") +
+  scale_y_continuous(labels=scales::percent) +
+  ylab("Relative Frequencies") +
+  geom_text(aes( label = scales::percent(..prop..),
+  y= ..prop.. ), stat= "count", vjust = -.5, size = 2) +
+  theme(axis.title = element_text(size = 7), axis.text = element_text(size = 7)) +
+  theme_light() + theme(panel.background = element_rect(fill = "#E5F9FF", colour="#D4AFB9"))
+```
+
+```{r}
+library(dplyr)
+library(knitr)
+library(kableExtra)
+library(psych)
+describe(data.short$data.happyIND) %>%
+  kable() %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = F)
+```
+
+The mean value of the level of happiness is 3.97. The skewness is equal to -0.02 which means approximately symmetric distribution of the level of happiness.
+
+### `god`
+```{r}
+library(ggplot2)
+g2 <- ggplot(data = data.short, aes (x = data.god1, y = (..count..)/sum(..count..))) + 
+  geom_histogram(bins = 20, binwidth = 0.5) +
+  labs(x = "Importance of god in life") +
+  scale_y_continuous(labels=scales::percent) +
+  ylab("Relative Frequencies") +
+  geom_text(aes( label = scales::percent(..prop..),
+  y= ..prop.. ), stat= "count", vjust = -.5, size = 2) +
+  theme(axis.title = element_text(size = 7), axis.text = element_text(size = 7)) +
+  theme_light()
+```
+
+```{r}
+describe(data.short$data.god1) %>%
+  kable() %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = F)
+```
+
+The mean value of the importance of god is 5.19. The skewness is equal to 0.15 which means approximately symmetric distribution of the importance of god.
+
+### `money`
+```{r}
+g3 <- ggplot(data = data.short, aes (x = data.money1, y = (..count..)/sum(..count..))) + 
+  geom_histogram(bins = 20, binwidth = 0.5) +
+  labs(x = "Satisfaction with finances") +
+  scale_y_continuous(labels=scales::percent) +
+  ylab("Relative Frequencies") +
+  geom_text(aes( label = scales::percent(..prop..),
+  y= ..prop.. ), stat= "count", vjust = -.5, size = 2) +
+  theme(axis.title = element_text(size = 7), axis.text = element_text(size = 7)) +
+  theme_light()
+```
+
+```{r}
+describe(data.short$data.money1) %>%
+  kable() %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = F)
+```
+
+The mean value of the satisfaction with finances of household is 4.32. The skewness is equal to 0.37 which means approximately symmetric distribution of the satisfaction with finances of household.
+
+### `health`
+```{r}
+library(scales)
+g4 <- ggplot(data = data.short, aes (x = data.health1)) +
+  geom_bar(aes(y = (..count..)/sum(..count..))) +
+  geom_text(aes(y = ((..count..)/sum(..count..)), label = scales::percent((..count..)/sum(..count..))), stat = "count", vjust = -0.5, size = 2) +
+  scale_y_continuous(labels = percent) +
+  labs(x = "State of health") +
+  ylab("Relative Frequencies") +
+  geom_text(aes( label = scales::percent(..prop..),
+  y= ..prop.. ), stat= "count", vjust = -.5, size = 2) +
+  theme(axis.title = element_text(size = 7), axis.text = element_text(size = 7)) +
+  theme_light()
+```
+
+Below, on the graphs, you can see the distributions of all the variables which are approximately symmetric according to investigation of descriptive statistics of the variables.
+
+```{r}
+library(gridExtra)
+grid.arrange(g1, g2, g3, g4, nrow = 2)
+```
+
+# Bivariate tests
+
+```{r}
+gbv1 <- ggplot(data.short, aes(x = data.god1, y = data.happyIND)) + 
+                          geom_point(alpha = 1/10) +
+                          geom_jitter() +
+                          geom_smooth(method = "lm") +
+                          xlab("Importance of god") + 
+                          ylab("Happiness Index") +
+                          theme_light()
+```
+
+```{r}
+gbv2 <- ggplot(data.short, aes(x = data.money1, y = data.happyIND)) + 
+                          geom_point(alpha = 1/10) +
+                          geom_jitter() +
+                          geom_smooth(method = "lm") +
+                          xlab("Satisfaction with money") + 
+                          ylab("Happiness Index") +
+                          theme_light()
+```
+
+```{r}
+gbv3 <- ggplot(data.short, aes(x = data.health1, y = data.happyIND)) + 
+              geom_boxplot() +
+              labs(y = "Happiness Index", x = "Health State") +
+              theme(axis.title = element_text(size = 7), axis.text = element_text(size = 7)) +
+              theme_light()
+
+```
+
+```{r}
+grid.arrange(gbv1, gbv2, gbv3, nrow = 2)
+
+# importance of god in life
+corr.test(data.short$data.god1, data.short$data.happyIND)
+
+# satisfaction with finances
+corr.test(data.short$data.money1, data.short$data.happyIND)
+
+# state of health 
+res.aov <- aov(data.happyIND ~ data.health1, data = data.short)
+summary(res.aov)
+```
+
+Here are the outputs which I may conclude from the information on the graphs, correlation tests and ANOVA presented above:
+
+1. The correlation coefficient (0.01) between the importance of god and the level of happiness is approximately 0 which means that there is almost no association between these two variables.
+2. The correlation coefficient (0.53) between the satisfaction with finances in household and the level of happiness indicates moderate positive association between these two variables.
+3. The p-value is less than 0.05 which means that there at least one sample mean value of health state which is not equal to others
+
+# Regression Analysis
+
+## Multiple Regression
+
+This part of the research is dedicated to the multiple regression analysis.
+
+First, I have chosen forward method in finding the model that fits better to my research, then, I compared the nested models with the help of ANOVA. I will explain the results of intermediate models ("model1" and "model2") first, and then explain in detail the output of the final model ("model3").
+
+```{r}
+model1 <- lm(data.happyIND ~ data.money1, data = data.short)
+summary(model1)
+```
+
+The model shows the relationship between the satisfaction with finances in household and the level of happiness of a person. 
+
+The intercept is equal to 2.64. The model explains 28.4 percent of total variance, the p-value is less than 0.05 which indicates that the overall model is significant. The increase in the satisfaction with finances in household by 1 leads to the increase of the level of happiness by 0.304. The p-value < 0.05 of this variable indicates high significance in explaining the change of the outcome variable.
+
+```{r}
+model2 <- lm(data.happyIND ~ data.money1 + data.health1, data = data.short)
+summary(model2)
+```
+
+The multiple regression model shows the relationship between two predictors: the satisfaction with finances in household (numeric) and the health state of a person (categorical); and the outcome variable: the level of happiness of a person. 
+
+The intercept is equal to 1.71 when health state of a person is equal to 1 and "money" equals to 0. The increase in the satisfaction with finances in household by 1 leads to the increase of the level of happiness by 0.27. The level of happiness increases by the coefficient of each of the health state in comparison to a person with health state 1. All of the variables have p-value < 0.05 which indicates their significance. The model explains 33.4 percent of total variance, the p-value is less than 0.05 which indicates that the overall model is significant. 
+
+```{r}
+anova(model1, model2)
+```
+
+P-value < 0.05 indicates that adding variable of the health state to the model significantly improves it. 
+
+```{r}
+model3 <- lm(data.happyIND ~ data.money1 + data.health1 + data.god1, data = data.short)
+summary(model3)
+```
+
+The multiple regression model shows the relationship between 3 predictors: the satisfaction with finances in household (numeric), the health state of a person (categorical) and the importance of god (numeric); and the outcome variable: the level of happiness of a person. 
+
+The intercept is equal to 1.57 when health state of a person is equal to 1 and "money" and "god" equals to 0. The increase in the satisfaction with finances in household by 1 leads to the increase of the level of happiness by 0.27. The increase in the importance of god by 1 leads to the increase of the level of happiness by 0.02. The level of happiness increases by the coefficient of each of the health state in comparison to a person with health state 1. All of the variables have p-value < 0.05 which indicates their significance. The model explains 33.7 percent of total variance, the p-value is less than 0.05 which indicates that the overall model is significant. 
+
+
+```{r}
+anova(model2, model3)
+```
+
+Adding the importance of god into the model significantly improves it as long as p-value < 0.05.
+
+## Model Diagnostic
+
+```{r}
+plot(model3)
+```
+
+Model Diagnostic shows the following:
+
+1. The residuals are normally distributed as long as they almost follow the straight line.
+2. There are no leverages in the model as long as they do not cross the Cook's distance line.
+
+## Linearity Checking
+
+In this part I tried to add non-linear effect into the model by adding the interval variable "age" into the final model. I tried 3 different effects: Polynomial Regression, Spline Regression and Generalized Additive Model (GAM), then I compared them with the use of AIC.
+
+### Polynomial regression
+```{r}
+modelpol <- lm(data.happyIND ~ data.money1 + data.health1 + data.god1 + poly(data.age,3), data = data.short)
+summary(modelpol)
+ggplot(data.short, aes(data.age, data.happyIND))+ geom_point()+
+  geom_smooth(formula = y ~ poly(x, 3, raw = TRUE)) +  
+  ggtitle("Polynomial Regression")
+```
+
+### Spline regression
+```{r}
+library(splines)
+knots <- quantile(data.short$data.happyIND, p = c(0.25, 0.5, 0.75))
+modelspl <- lm(data.happyIND ~ data.money1 + data.health1 + data.god1 +
+                 bs(data.age, knots=knots), data = data.short)
+summary(modelspl)
+ggplot(data.short, aes(data.age,data.happyIND) ) +
+  geom_point() +
+  stat_smooth(method = lm, formula = y ~ splines::bs(x, df = 3))+
+  ggtitle("Spline Regression")
+```
+
+### Generalized additive model
+```{r}
+library(mgcv)
+modelgam <- gam(data.happyIND ~ s(data.age) + data.money1 + data.health1 + data.god1, data = data.short)
+summary(modelgam)
+ggplot(data.short, aes(data.age,data.happyIND) ) +
+  geom_point() +
+  stat_smooth(method = gam, formula = y ~ s(x)) + ggtitle("GAM")
+```
+
+### Choosing the best effect
+```{r}
+AIC(modelpol)
+AIC(modelspl)
+AIC(modelgam)
+```
+
+The AIC shows that the best non-linear effects is Polynomial Regression and Spline Regression
+
+## Interaction effect
+
+The final part of my analysis includes interaction effect. I decided to investigate whether the satisfaction with finances of household have an impact on the strenght of the relationship between the importance of god and the level of happiness.
+
+```{r}
+model4 <- lm(data.happyIND ~ data.god1*data.money1 + data.health1, data = data.short)
+summary(model4)
+```
+
+With the increase of satisfaction with finances by 1, the level of happiness increases by 0.23. Being in better health state increases the overall happiness level when other predictors equals 0. The model explains 33.8 percent of total variance, the p-value is less than 0.05 which means that overall model is significant.
+
+As we can see from the table, the interaction effect is significant. It means that with the increase of importance of god the level of happiness rises for people who are completely satisfied with their finances. The graph of interaction effect is presented below. 
+
+```{r}
+anova(model3, model4)
+```
+
+Adding the interaction effect to the final model improves it even more.
+
+```{r}
+library(sjPlot)
+sjPlot::plot_model(model4, type = 'int', mdrt.values = "minmax", title = "Predicted value of Happiness Index", axis.title = c("Importance of god", "Happiness Index")) + 
+  theme_sjplot2() 
+```
+
+# Conclusion and Main results
+
+The presented analysis have shown what are the key factors which have an impact on the level of happiness of a Russian citizen. I want to list the key results below:
+
+- Satisfaction with finances and health state of a person are one of the explanatory factors of the level of overall happiness of this person
+- There is almost no difference in the level of happiness among people for whom god is important and not. However adding for people with higher satisfaction of finances, the importance of god slighly increases the level of happiness in comparison with those who are not satisfied with their finances
+- There is a non-linear relationship between age and the level of happiness
+
+
+
